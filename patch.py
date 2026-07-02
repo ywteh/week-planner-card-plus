@@ -218,7 +218,14 @@ fn=r'''
                 const f=fcAt(h);
                 if(!f) return "";
                 const cond=f?f.condition:null;
-                const pop=(f && f.precipitation_probability!=null)?Math.round(f.precipitation_probability):null;
+                // Prefer chance-of-rain (%); fall back to precipitation amount (mm).
+                let popLabel="";
+                if(f.precipitation_probability!=null){
+                  popLabel=Math.round(f.precipitation_probability)+"%";
+                } else if(f.precipitation!=null && f.precipitation!==""){
+                  const mm=Number(f.precipitation);
+                  if(Number.isFinite(mm) && mm>0) popLabel=(Math.round(mm*10)/10)+"mm";
+                }
                 const icon=(cond && this._getWeatherIcon)?this._getWeatherIcon({condition:cond}):null;
                 return W`<div class="wxHour">
                   <div class="wxHourTime">${fcH12(h)}</div>
@@ -227,7 +234,7 @@ fn=r'''
                         ? W`<img class="wxHourIcon" src="${icon}" alt="${cond}" title="${cond}">`
                         : W`<div class="wxHourEmoji" title="${cond}">${condEmoji[cond]||'•'}</div>`)
                     : W`<div class="wxHourNone" title="no forecast">&middot;</div>`}
-                  ${pop!=null ? W`<div class="wxHourPop">${pop}%</div>` : ""}
+                  ${popLabel ? W`<div class="wxHourPop">${popLabel}</div>` : ""}
                 </div>`;
               })}
             </div>
