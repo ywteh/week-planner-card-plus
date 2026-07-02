@@ -2453,12 +2453,19 @@ const pxPerMin = hourHeight / 60;
 
     const style=W`<style>
       .timelineWrap{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;box-sizing:border-box;${fill?`height:${wrapHeight};`:''}}
-      .timelineDateNav{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0 6px 0;}
+      .timelineDateNav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:2px 8px 6px 8px;}
+      .timelineDateNav .navLeft{display:flex;align-items:center;gap:16px;}
       .timelineDateNav .navBtn{cursor:pointer;user-select:none;border:0;background:rgba(0,0,0,0.06);color:#333;width:40px;height:40px;border-radius:50%;font-size:1.4em;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
       .timelineDateNav .navBtn[disabled]{opacity:.3;cursor:default;}
-      .timelineDateNav .dateLabel{cursor:pointer;text-align:center;min-width:9em;line-height:1.15;}
+      .timelineDateNav .dateLabel{cursor:pointer;text-align:left;min-width:9em;line-height:1.15;}
       .timelineDateNav .dateLabel .wd{font-weight:700;font-size:1.15em;color:#222;}
       .timelineDateNav .dateLabel .dt{font-size:0.9em;color:#666;margin-top:2px;}
+      .timelineWeather{display:flex;align-items:center;gap:10px;color:#333;min-height:44px;}
+      .timelineWeather .wxIcon{width:44px;height:44px;object-fit:contain;}
+      .timelineWeather .wxText{line-height:1.15;text-align:right;}
+      .timelineWeather .wxTemp{font-weight:700;font-size:1.15em;color:#222;}
+      .timelineWeather .wxTemp .wxLow{font-weight:500;opacity:.6;font-size:0.85em;margin-left:4px;}
+      .timelineWeather .wxCond{font-size:0.85em;opacity:.75;text-transform:capitalize;margin-top:2px;}
       .timelineHeader{display:grid;grid-template-columns:${labelW}px repeat(${colCount},1fr);gap:8px;align-items:end;width:100%;min-width:0;}
       .timelineHeaderDay{font-weight:700;font-size:0.95em;color:#333;line-height:1.1;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineHeaderDay .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--border-color,#999);}
@@ -2482,12 +2489,21 @@ const pxPerMin = hourHeight / 60;
       ${style}
       <div class="timelineWrap">
         <div class="timelineDateNav">
-          <button class="navBtn prev" ?disabled=${!canPrev} @click=${()=>goDay(-1)}>&#8249;</button>
-          <div class="dateLabel" title="Jump to today" @click=${()=>goToday()}>
-            <div class="wd">${day.date.toFormat?day.date.toFormat("cccc"):""}</div>
-            <div class="dt">${day.date.toFormat?day.date.toFormat("d LLL yyyy"):""}</div>
+          <div class="navLeft">
+            <button class="navBtn prev" ?disabled=${!canPrev} @click=${()=>goDay(-1)}>&#8249;</button>
+            <div class="dateLabel" title="Jump to today" @click=${()=>goToday()}>
+              <div class="wd">${day.date.toFormat?day.date.toFormat("cccc"):""}</div>
+              <div class="dt">${day.date.toFormat?day.date.toFormat("d LLL yyyy"):""}</div>
+            </div>
+            <button class="navBtn next" ?disabled=${!canNext} @click=${()=>goDay(1)}>&#8250;</button>
           </div>
-          <button class="navBtn next" ?disabled=${!canNext} @click=${()=>goDay(1)}>&#8250;</button>
+          ${day.weather ? W`<div class="timelineWeather">
+            ${day.weather.icon ? W`<img class="wxIcon" src="${day.weather.icon}" alt="${day.weather.condition||''}">` : ""}
+            <div class="wxText">
+              ${(day.weather.temperature!=null||day.weather.templow!=null) ? W`<div class="wxTemp">${day.weather.temperature!=null?W`${day.weather.temperature}&deg;`:""}${day.weather.templow!=null?W`<span class="wxLow">${day.weather.templow}&deg;</span>`:""}</div>` : ""}
+              ${day.weather.condition ? W`<div class="wxCond">${day.weather.condition}</div>` : ""}
+            </div>
+          </div>` : W`<div class="timelineWeather"></div>`}
         </div>
         <div class="timelineHeader">
           <div></div>
