@@ -2545,7 +2545,7 @@ const pxPerMin = hourHeight / 60;
                   popLabel=Math.round(f.precipitation_probability)+"%";
                 } else if(f.precipitation!=null && f.precipitation!==""){
                   const mm=Number(f.precipitation);
-                  if(Number.isFinite(mm) && mm>0) popLabel=(Math.round(mm*10)/10)+"mm";
+                  if(Number.isFinite(mm)) popLabel=(Math.round(mm*10)/10)+"mm";
                 }
                 const icon=(cond && this._getWeatherIcon)?this._getWeatherIcon({condition:cond}):null;
                 return W`<div class="wxHour">
