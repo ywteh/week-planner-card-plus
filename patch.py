@@ -220,6 +220,7 @@ fn=r'''
             <div class="wxHours">
               ${fcHours.map(h=>{
                 const f=fcAt(h);
+                if(!f) return "";
                 const cond=f?f.condition:null;
                 const pop=(f && f.precipitation_probability!=null)?Math.round(f.precipitation_probability):null;
                 const icon=(cond && this._getWeatherIcon)?this._getWeatherIcon({condition:cond}):null;
