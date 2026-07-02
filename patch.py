@@ -193,7 +193,7 @@ fn=r'''
       .timelineGrid::before{content:"";position:absolute;left:${labelW}px;right:0;top:0;bottom:0;background:linear-gradient(to right, rgba(0,0,0,.06) 1px, transparent 1px);background-size:calc(100% / ${colCount}) 100%;pointer-events:none;opacity:.6;}
       .timelineHourRow{position:absolute;left:0;right:0;height:${hourHeight}px;border-top:1px solid rgba(0,0,0,0.08);pointer-events:none;z-index:1;}
       .timelineHourLabel{position:absolute;left:0;top:3px;width:${labelW}px;padding-left:8px;font-size:0.75em;color:#666;}
-      .timelineEvent{box-sizing:border-box;position:absolute;min-height:14px;border-left:6px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:12px;padding:8px 10px;overflow:hidden;box-shadow:0 2px 2px rgba(0,0,0,0.10);cursor:pointer;z-index:1;pointer-events:auto;touch-action:manipulation;}
+      .timelineEvent{box-sizing:border-box;position:absolute;min-height:14px;border-left:6px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:10px;padding:2px 8px;overflow:hidden;box-shadow:0 2px 2px rgba(0,0,0,0.10);cursor:pointer;z-index:1;pointer-events:auto;touch-action:manipulation;line-height:1.2;}
       .timelineEvent .time{font-size:0.9em;opacity:0.9;}
       .timelineEvent .title{font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
       .timelineEvent .loc{font-size:0.75em;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
