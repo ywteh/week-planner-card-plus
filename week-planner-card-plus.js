@@ -2365,6 +2365,36 @@ const pxPerMin = hourHeight / 60;
     const goDay=(delta)=>{this._rnrDayOffset=(this._rnrDayOffset||0)+delta;this.requestUpdate&&this.requestUpdate();};
     const goToday=()=>{this._rnrDayOffset=0;this.requestUpdate&&this.requestUpdate();};
 
+    // Hourly condition indicators (right of the nav bar). Config:
+    //   hourlyForecastEntity: a sensor whose `forecast` attribute is the hourly list
+    //   forecastHours: [9,12,15,18,21]
+    let fcHours=[9,12,15,18,21], hourlyEntity=null;
+    try{
+      const cfg4=(this&&(this._config||this.config))||{};
+      if(Array.isArray(cfg4.forecastHours)&&cfg4.forecastHours.length)
+        fcHours=cfg4.forecastHours.map(x=>parseInt(x,10)).filter(x=>Number.isFinite(x));
+      hourlyEntity=cfg4.hourlyForecastEntity ?? cfg4.hourlyWeatherEntity ?? null;
+    }catch(e){}
+    const hourlyList=(hourlyEntity && this.hass && this.hass.states[hourlyEntity]
+      && this.hass.states[hourlyEntity].attributes
+      && this.hass.states[hourlyEntity].attributes.forecast) || [];
+    const condAt=(h)=>{
+      for(const f of hourlyList){
+        if(!f||!f.datetime) continue;
+        const d=new Date(f.datetime);
+        if(d.getFullYear()===day.date.year && (d.getMonth()+1)===day.date.month
+           && d.getDate()===day.date.day && d.getHours()===h) return f.condition||null;
+      }
+      return null;
+    };
+    const condEmoji={clear:'☀️','clear-night':'🌙',sunny:'☀️',
+      partlycloudy:'⛅',cloudy:'☁️',overcast:'☁️',fog:'🌫️',
+      hail:'🌨️',lightning:'⛈️','lightning-rainy':'⛈️',
+      pouring:'🌧️',rainy:'🌧️',snowy:'❄️',
+      'snowy-rainy':'🌨️',windy:'🌬️','windy-variant':'🌬️',
+      exceptional:'⚠️'};
+    const fcH12=(h)=>{const ap=h<12?'am':'pm';let hh=h%12;if(hh===0)hh=12;return hh+ap;};
+
     const cals=(this._calendars||[]).filter(c=>c&&c.entity&&(this._hideCalendars||[]).indexOf(c.entity)===-1);
     if(!cals.length) return _origRenderDays.call(this);
     const colCount=Math.max(1, cals.length);
@@ -2457,15 +2487,15 @@ const pxPerMin = hourHeight / 60;
       .timelineDateNav .navLeft{display:flex;align-items:center;gap:16px;}
       .timelineDateNav .navBtn{cursor:pointer;user-select:none;border:0;background:rgba(0,0,0,0.06);color:#333;width:40px;height:40px;border-radius:50%;font-size:1.4em;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
       .timelineDateNav .navBtn[disabled]{opacity:.3;cursor:default;}
-      .timelineDateNav .dateLabel{cursor:pointer;text-align:left;min-width:9em;line-height:1.15;}
+      .timelineDateNav .dateLabel{cursor:pointer;text-align:center;min-width:9em;line-height:1.15;}
       .timelineDateNav .dateLabel .wd{font-weight:700;font-size:1.15em;color:#222;}
       .timelineDateNav .dateLabel .dt{font-size:0.9em;color:#666;margin-top:2px;}
-      .timelineWeather{display:flex;align-items:center;gap:10px;color:#333;min-height:44px;}
-      .timelineWeather .wxIcon{width:44px;height:44px;object-fit:contain;}
-      .timelineWeather .wxText{line-height:1.15;text-align:right;}
-      .timelineWeather .wxTemp{font-weight:700;font-size:1.15em;color:#222;}
-      .timelineWeather .wxTemp .wxLow{font-weight:500;opacity:.6;font-size:0.85em;margin-left:4px;}
-      .timelineWeather .wxCond{font-size:0.85em;opacity:.75;text-transform:capitalize;margin-top:2px;}
+      .timelineWeather{display:flex;align-items:flex-end;gap:14px;color:#333;min-height:44px;}
+      .timelineWeather .wxHour{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:34px;}
+      .timelineWeather .wxHourTime{font-size:0.72em;opacity:.7;white-space:nowrap;}
+      .timelineWeather .wxHourIcon{width:32px;height:32px;object-fit:contain;}
+      .timelineWeather .wxHourEmoji{font-size:1.5em;line-height:1;}
+      .timelineWeather .wxHourNone{font-size:1.2em;opacity:.3;line-height:1.25;}
       .timelineHeader{display:grid;grid-template-columns:${labelW}px repeat(${colCount},1fr);gap:8px;align-items:end;width:100%;min-width:0;}
       .timelineHeaderDay{font-weight:700;font-size:0.95em;color:#333;line-height:1.1;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineHeaderDay .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--border-color,#999);}
@@ -2497,13 +2527,20 @@ const pxPerMin = hourHeight / 60;
             </div>
             <button class="navBtn next" ?disabled=${!canNext} @click=${()=>goDay(1)}>&#8250;</button>
           </div>
-          ${day.weather ? W`<div class="timelineWeather">
-            ${day.weather.icon ? W`<img class="wxIcon" src="${day.weather.icon}" alt="${day.weather.condition||''}">` : ""}
-            <div class="wxText">
-              ${(day.weather.temperature!=null||day.weather.templow!=null) ? W`<div class="wxTemp">${day.weather.temperature!=null?W`${day.weather.temperature}&deg;`:""}${day.weather.templow!=null?W`<span class="wxLow">${day.weather.templow}&deg;</span>`:""}</div>` : ""}
-              ${day.weather.condition ? W`<div class="wxCond">${day.weather.condition}</div>` : ""}
-            </div>
-          </div>` : W`<div class="timelineWeather"></div>`}
+          <div class="timelineWeather">
+            ${fcHours.map(h=>{
+              const cond=condAt(h);
+              const icon=(cond && this._getWeatherIcon)?this._getWeatherIcon({condition:cond}):null;
+              return W`<div class="wxHour">
+                <div class="wxHourTime">${fcH12(h)}</div>
+                ${cond
+                  ? (icon
+                      ? W`<img class="wxHourIcon" src="${icon}" alt="${cond}" title="${cond}">`
+                      : W`<div class="wxHourEmoji" title="${cond}">${condEmoji[cond]||'•'}</div>`)
+                  : W`<div class="wxHourNone" title="no forecast">&middot;</div>`}
+              </div>`;
+            })}
+          </div>
         </div>
         <div class="timelineHeader">
           <div></div>
