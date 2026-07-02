@@ -2395,7 +2395,15 @@ const pxPerMin = hourHeight / 60;
       exceptional:'⚠️'};
     const fcH12=(h)=>{const ap=h<12?'am':'pm';let hh=h%12;if(hh===0)hh=12;return hh+ap;};
 
-    const cals=(this._calendars||[]).filter(c=>c&&c.entity&&(this._hideCalendars||[]).indexOf(c.entity)===-1);
+    // Shared calendars (e.g. "family") span all columns behind the per-person
+    // events. Mark via calendars[].shared:true or config sharedCalendars:[...].
+    let sharedList=[];
+    try{const c=(this._config||this.config||{}); if(Array.isArray(c.sharedCalendars)) sharedList=c.sharedCalendars;}catch(e){}
+    const isShared=(c)=>c && (c.shared===true || sharedList.indexOf(c.entity)>-1);
+    const allCals=(this._calendars||[]).filter(c=>c&&c.entity&&(this._hideCalendars||[]).indexOf(c.entity)===-1);
+    const cals=allCals.filter(c=>!isShared(c));
+    const sharedCals=allCals.filter(isShared);
+    const sharedEntities=new Set(sharedCals.map(c=>c.entity));
     if(!cals.length) return _origRenderDays.call(this);
     const colCount=Math.max(1, cals.length);
 
@@ -2478,8 +2486,17 @@ const pxPerMin = hourHeight / 60;
       return {cal:c, color:(c.color||"#999"), title:(c.name||c.entity), day, fullDay, timed};
     });
 
+    // Shared ("family") events: full-width, drawn behind the per-person events.
+    const sharedColorMap={}; sharedCals.forEach(c=>{sharedColorMap[c.entity]=c.color||"#999";});
+    const colorForShared=(ev)=>{ for(const e of (ev.calendars||[])){ if(sharedEntities.has(e)) return sharedColorMap[e]; } return (ev.colors&&ev.colors[0])||"#999"; };
+    const sharedEvs=allEvs.filter(ev=>Array.isArray(ev.calendars)&&ev.calendars.some(e=>sharedEntities.has(e)));
+    const sharedAllDay=sharedEvs.filter(e=>!!e.fullDay);
+    const sharedTimed=layoutTimed(sharedEvs.filter(e=>!e.fullDay));
+
     const colWExpr=(ci)=>`calc(${labelW}px + (${ci} * (100% - ${labelW}px) / ${colCount}))`;
     const baseWExpr=`calc((100% - ${labelW}px) / ${colCount})`;
+    const vTop=(sm)=> fill ? `${((sm-startMinWin)/winMin)*100}%` : `${(sm-startMinWin)*pxPerMin}px`;
+    const vHeight=(sm,em)=> fill ? `${((em-sm)/winMin)*100}%` : `${Math.max(18,(em-sm)*pxPerMin)}px`;
 
     const style=W`<style>
       .timelineWrap{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;box-sizing:border-box;${fill?`height:${wrapHeight};`:''}}
@@ -2507,7 +2524,11 @@ const pxPerMin = hourHeight / 60;
       .timelineHeaderDay .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--border-color,#999);}
       .timelineAllDayBar{display:grid;grid-template-columns:${labelW}px repeat(${colCount},1fr);gap:8px;align-items:start;width:100%;min-width:0;}
       .timelineAllDayLabel{padding-left:8px;font-size:0.95em;color:#666;padding-top:4px;}
-      .timelineAllDayCell{padding:0 6px 2px 6px;min-height:10px;}
+      .timelineAllDayCell{padding:0 6px 2px 6px;min-height:10px;position:relative;z-index:1;}
+      .timelineAllDaySpan{position:absolute;left:${labelW}px;right:0;top:0;bottom:2px;z-index:0;padding:0 6px;display:flex;flex-direction:column;justify-content:flex-start;gap:2px;pointer-events:none;}
+      .timelineAllDaySpan .timelineAllDayPill{pointer-events:auto;opacity:0.9;}
+      .timelineSpanEvent{box-sizing:border-box;position:absolute;left:${labelW}px;right:0;z-index:0;border-left:6px solid var(--border-color,#999);background:color-mix(in srgb, var(--border-color,#999) 30%, transparent);border-radius:10px;padding:2px 8px;overflow:hidden;color:#333;cursor:pointer;pointer-events:auto;touch-action:manipulation;line-height:1.2;min-height:14px;}
+      .timelineSpanEvent .spanTitle{font-weight:600;font-size:0.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineAllDayPill{display:block;border-left:4px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:999px;padding:4px 10px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1em;cursor:pointer;pointer-events:auto;touch-action:manipulation;}
       .timelineBody{position:relative;overflow:${fill?'hidden':'auto'};flex:1 1 auto;min-height:0;height:100%;max-height:100%;border-radius:14px;background:rgba(255,255,255,0.35);width:100%;min-width:0;}
       .timelineGrid{position:relative;${fill?'height:100%;':`height:${hoursShown*hourHeight}px;`}width:100%;min-width:0;}
@@ -2570,8 +2591,13 @@ const pxPerMin = hourHeight / 60;
           ${colLayouts.map((cl)=>W`<div class="timelineHeaderDay" title="${cl.title}"><span class="dot" style="--border-color:${cl.color}"></span>${cl.title}</div>`)}
         </div>
 
-        <div class="timelineAllDayBar" style="min-height:72px;">
+        <div class="timelineAllDayBar" style="min-height:72px; position:relative;">
           <div class="timelineAllDayLabel">All day</div>
+          ${sharedAllDay.length ? W`<div class="timelineAllDaySpan">
+            ${sharedAllDay.map((ev)=>W`<div class="timelineAllDayPill" style="--border-color:${colorForShared(ev)}" @click=${(e)=>{e?.stopPropagation?.();e?.preventDefault?.();this._handleEventClick(ev.ce||ev,e);}}>
+              ${ev.summary||"(no title)"}
+            </div>`)}
+          </div>` : ""}
           ${colLayouts.map((cl)=>{
             return W`<div class="timelineAllDayCell" style="min-height:72px;" @click=${(t)=>{if(this._rnrClickEmptyDayToAddPlus||this._rnrTapEmptyDayToAdd){let ds=null;try{ds=cl.day.date.toFormat("yyyy-LL-dd")}catch(e){};if(this._rnrClickEmptyDayToAddPlus)this._rnrOpenAddPlusDialogForDate?.(ds);else this._rnrOpenAddEventForDate?.(ds);}}}>
               ${cl.fullDay.map((ev)=>{
@@ -2590,6 +2616,15 @@ const pxPerMin = hourHeight / 60;
               const rowTop = fill ? `${(i/hoursShown)*100}%` : `${i*hourHeight}px`;
               return W`<div class="timelineHourRow" style="top:${rowTop}">
                 <div class="timelineHourLabel">${fmtHour(h)}</div>
+              </div>`;
+            })}
+
+            ${sharedTimed.map((it)=>{
+              const ev=it.e;
+              return W`<div class="timelineSpanEvent"
+                style="top:${vTop(it.startMin)}; height:${vHeight(it.startMin,it.endMin)}; --border-color:${colorForShared(ev)}"
+                @click=${(e)=>{e.stopPropagation();this._handleEventClick(ev.ce||ev,e);}}>
+                  <div class="spanTitle">${ev.summary||"(no title)"}</div>
               </div>`;
             })}
 
