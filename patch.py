@@ -32,7 +32,17 @@ fn=r'''
   Card.prototype._rnrRenderTimelineByCalendar=function(){
     const days=this._days||[];
     if(!days.length) return _origRenderDays.call(this);
-    let day = days.find(d=>{try{return this._isToday&&this._isToday(d.date)}catch(e){return false}}) || days[0];
+
+    // Which day is shown: today + user nav offset, clamped to the fetched range.
+    // Widen the fetched range with days:/startingDayOffset: so prev/next have room.
+    const todayIdx=days.findIndex(d=>{try{return this._isToday&&this._isToday(d.date)}catch(e){return false}});
+    const baseIdx=todayIdx>=0?todayIdx:0;
+    let idx=Math.min(days.length-1, Math.max(0, baseIdx+(this._rnrDayOffset||0)));
+    this._rnrDayOffset=idx-baseIdx;
+    const day=days[idx];
+    const canPrev=idx>0, canNext=idx<days.length-1;
+    const goDay=(delta)=>{this._rnrDayOffset=(this._rnrDayOffset||0)+delta;this.requestUpdate&&this.requestUpdate();};
+    const goToday=()=>{this._rnrDayOffset=0;this.requestUpdate&&this.requestUpdate();};
 
     const cals=(this._calendars||[]).filter(c=>c&&c.entity&&(this._hideCalendars||[]).indexOf(c.entity)===-1);
     if(!cals.length) return _origRenderDays.call(this);
@@ -109,6 +119,12 @@ fn=r'''
 
     const style=W`<style>
       .timelineWrap{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;}
+      .timelineDateNav{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0 6px 0;}
+      .timelineDateNav .navBtn{cursor:pointer;user-select:none;border:0;background:rgba(0,0,0,0.06);color:#333;width:40px;height:40px;border-radius:50%;font-size:1.4em;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
+      .timelineDateNav .navBtn[disabled]{opacity:.3;cursor:default;}
+      .timelineDateNav .dateLabel{cursor:pointer;text-align:center;min-width:9em;line-height:1.15;}
+      .timelineDateNav .dateLabel .wd{font-weight:700;font-size:1.15em;color:#222;}
+      .timelineDateNav .dateLabel .dt{font-size:0.9em;color:#666;margin-top:2px;}
       .timelineHeader{display:grid;grid-template-columns:${labelW}px repeat(${colCount},1fr);gap:8px;align-items:end;width:100%;min-width:0;}
       .timelineHeaderDay{font-weight:700;font-size:0.95em;color:#333;line-height:1.1;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineHeaderDay .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--border-color,#999);}
@@ -131,6 +147,14 @@ fn=r'''
     return W`
       ${style}
       <div class="timelineWrap">
+        <div class="timelineDateNav">
+          <button class="navBtn prev" ?disabled=${!canPrev} @click=${()=>goDay(-1)}>&#8249;</button>
+          <div class="dateLabel" title="Jump to today" @click=${()=>goToday()}>
+            <div class="wd">${day.date.toFormat?day.date.toFormat("cccc"):""}</div>
+            <div class="dt">${day.date.toFormat?day.date.toFormat("d LLL yyyy"):""}</div>
+          </div>
+          <button class="navBtn next" ?disabled=${!canNext} @click=${()=>goDay(1)}>&#8250;</button>
+        </div>
         <div class="timelineHeader">
           <div></div>
           ${colLayouts.map((cl)=>W`<div class="timelineHeaderDay" title="${cl.title}"><span class="dot" style="--border-color:${cl.color}"></span>${cl.title}</div>`)}
