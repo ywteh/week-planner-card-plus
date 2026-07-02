@@ -213,10 +213,6 @@ fn=r'''
             <button class="navBtn next" ?disabled=${!canNext} @click=${()=>goDay(1)}>&#8250;</button>
           </div>
           <div class="timelineWeather">
-            ${day.weather ? W`<div class="wxDaily">
-              ${(day.weather.temperature!=null||day.weather.templow!=null) ? W`<div class="wxTemp">${day.weather.temperature!=null?W`${day.weather.temperature}&deg;`:""}${day.weather.templow!=null?W`<span class="wxLow">${day.weather.templow}&deg;</span>`:""}</div>` : ""}
-              ${day.weather.condition ? W`<div class="wxCond">${day.weather.condition}</div>` : ""}
-            </div>` : ""}
             <div class="wxHours">
               ${fcHours.map(h=>{
                 const f=fcAt(h);
@@ -235,6 +231,10 @@ fn=r'''
                 </div>`;
               })}
             </div>
+            ${day.weather ? W`<div class="wxDaily">
+              ${(day.weather.temperature!=null||day.weather.templow!=null) ? W`<div class="wxTemp">${day.weather.temperature!=null?W`${day.weather.temperature}&deg;`:""}${day.weather.templow!=null?W`<span class="wxLow">${day.weather.templow}&deg;</span>`:""}</div>` : ""}
+              ${day.weather.condition ? W`<div class="wxCond">${day.weather.condition}</div>` : ""}
+            </div>` : ""}
           </div>
         </div>
         <div class="timelineHeader">
