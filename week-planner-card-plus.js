@@ -2393,6 +2393,19 @@ const pxPerMin = hourHeight / 60;
     }catch(e){}
     const startMinWin=startHour*60, endMinWin=endHour*60;
     const hoursShown=Math.max(1, endHour-startHour);
+    const winMin=Math.max(1, endMinWin-startMinWin);
+
+    // Fill-height mode: pin the timeline to a fixed height and lay events out
+    // by % of the window so nothing scrolls. Config: fillHeight: true, or
+    // timelineHeight: "<css length>" (e.g. "100dvh", "calc(100dvh - 72px)").
+    let wrapHeight=null;
+    try{
+      const cfg3=(this&&(this._config||this.config))||{};
+      const thRaw=cfg3.timelineHeight ?? cfg3.calendarHeight;
+      if(thRaw!=null&&thRaw!=="") wrapHeight=String(thRaw);
+      else if(cfg3.fillHeight===true||cfg3.fillHeight==="true") wrapHeight="100dvh";
+    }catch(e){}
+    const fill=!!wrapHeight;
 
     const fmtHour=(h)=>{if(use24)return String(h).padStart(2,"0")+":00";const ampm=h<12?"AM":"PM";let hh=h%12;if(hh===0)hh=12;return hh+" "+ampm;};
     const fmtTime=(dt)=>{if(!dt)return "";try{const fmt=(typeof this._timeFormat==="string"&&this._timeFormat)?this._timeFormat:(use24?"HH:mm":"h:mm a");return dt.toFormat?dt.toFormat(fmt):"";}catch(e){try{return String(dt);}catch(_){return "";}}};
@@ -2439,7 +2452,7 @@ const pxPerMin = hourHeight / 60;
     const baseWExpr=`calc((100% - ${labelW}px) / ${colCount})`;
 
     const style=W`<style>
-      .timelineWrap{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;}
+      .timelineWrap{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;box-sizing:border-box;${fill?`height:${wrapHeight};`:''}}
       .timelineDateNav{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0 6px 0;}
       .timelineDateNav .navBtn{cursor:pointer;user-select:none;border:0;background:rgba(0,0,0,0.06);color:#333;width:40px;height:40px;border-radius:50%;font-size:1.4em;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
       .timelineDateNav .navBtn[disabled]{opacity:.3;cursor:default;}
@@ -2453,12 +2466,12 @@ const pxPerMin = hourHeight / 60;
       .timelineAllDayLabel{padding-left:8px;font-size:0.95em;color:#666;padding-top:4px;}
       .timelineAllDayCell{padding:0 6px 2px 6px;min-height:10px;}
       .timelineAllDayPill{display:block;border-left:4px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:999px;padding:4px 10px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1em;cursor:pointer;pointer-events:auto;touch-action:manipulation;}
-      .timelineBody{position:relative;overflow:auto;flex:1 1 auto;min-height:0;height:100%;max-height:100%;border-radius:14px;background:rgba(255,255,255,0.35);width:100%;min-width:0;}
-      .timelineGrid{position:relative;height:${hoursShown*hourHeight}px;width:100%;min-width:0;}
+      .timelineBody{position:relative;overflow:${fill?'hidden':'auto'};flex:1 1 auto;min-height:0;height:100%;max-height:100%;border-radius:14px;background:rgba(255,255,255,0.35);width:100%;min-width:0;}
+      .timelineGrid{position:relative;${fill?'height:100%;':`height:${hoursShown*hourHeight}px;`}width:100%;min-width:0;}
       .timelineGrid::before{content:"";position:absolute;left:${labelW}px;right:0;top:0;bottom:0;background:linear-gradient(to right, rgba(0,0,0,.06) 1px, transparent 1px);background-size:calc(100% / ${colCount}) 100%;pointer-events:none;opacity:.6;}
       .timelineHourRow{position:absolute;left:0;right:0;height:${hourHeight}px;border-top:1px solid rgba(0,0,0,0.08);pointer-events:none;z-index:1;}
       .timelineHourLabel{position:absolute;left:0;top:3px;width:${labelW}px;padding-left:8px;font-size:0.75em;color:#666;}
-      .timelineEvent{box-sizing:border-box;position:absolute;border-left:6px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:12px;padding:8px 10px;overflow:hidden;box-shadow:0 2px 2px rgba(0,0,0,0.10);cursor:pointer;z-index:1;pointer-events:auto;touch-action:manipulation;}
+      .timelineEvent{box-sizing:border-box;position:absolute;min-height:14px;border-left:6px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:12px;padding:8px 10px;overflow:hidden;box-shadow:0 2px 2px rgba(0,0,0,0.10);cursor:pointer;z-index:1;pointer-events:auto;touch-action:manipulation;}
       .timelineEvent .time{font-size:0.9em;opacity:0.9;}
       .timelineEvent .title{font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
       .timelineEvent .loc{font-size:0.75em;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
@@ -2498,7 +2511,8 @@ const pxPerMin = hourHeight / 60;
           <div class="timelineGrid" @click=${(t)=>this._rnrHandleTimelineGridClick?.(t,colLayouts,labelW)}>
             ${Array.from({length:hoursShown}).map((_,i)=>{
               const h=startHour+i;
-              return W`<div class="timelineHourRow" style="top:${i*hourHeight}px">
+              const rowTop = fill ? `${(i/hoursShown)*100}%` : `${i*hourHeight}px`;
+              return W`<div class="timelineHourRow" style="top:${rowTop}">
                 <div class="timelineHourLabel">${fmtHour(h)}</div>
               </div>`;
             })}
@@ -2506,15 +2520,15 @@ const pxPerMin = hourHeight / 60;
             ${colLayouts.map((cl,colIndex)=>{
               return cl.timed.map((it)=>{
                 const ev=it.e;
-                const topPx=(it.startMin-startMinWin)*pxPerMin;
-                const hPx=Math.max(18,(it.endMin-it.startMin)*pxPerMin);
+                const topExpr = fill ? `${((it.startMin-startMinWin)/winMin)*100}%` : `${(it.startMin-startMinWin)*pxPerMin}px`;
+                const heightExpr = fill ? `${((it.endMin-it.startMin)/winMin)*100}%` : `${Math.max(18,(it.endMin-it.startMin)*pxPerMin)}px`;
                 const leftExpr=`calc(${colWExpr(colIndex)} + (${it.col} * (${baseWExpr} / ${it.colCount})) + 6px)`;
                 const widthExpr=`calc((${baseWExpr} / ${it.colCount}) - 12px)`;
                 const timeLabel=`${fmtTime(ev.start)} - ${fmtTime(ev.end)}`;
                 const descRaw=(ev.description ?? ev.ce?.description ?? ev.extendedProps?.description ?? ev.ce?.extendedProps?.description ?? "").toString();
                 const desc=descRaw.trim();
                 return W`<div class="timelineEvent"
-                  style="top:${topPx}px; height:${hPx}px; left:${leftExpr}; width:${widthExpr}; --border-color:${cl.color}"
+                  style="top:${topExpr}; height:${heightExpr}; left:${leftExpr}; width:${widthExpr}; --border-color:${cl.color}"
                   @click=${(e)=>{e.stopPropagation();this._handleEventClick(ev.ce||ev,e);}}>
                     <div class="title">${ev.summary||"(no title)"}</div>
                     ${desc ? W`<div class="desc">${desc}</div>` : ""}
