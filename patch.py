@@ -186,18 +186,18 @@ fn=r'''
       .timelineDateNav .dateLabel{cursor:pointer;text-align:center;min-width:9em;line-height:1.15;}
       .timelineDateNav .dateLabel .wd{font-weight:700;font-size:1.15em;color:#222;}
       .timelineDateNav .dateLabel .dt{font-size:0.9em;color:#666;margin-top:2px;}
-      .timelineWeather{display:flex;align-items:flex-end;gap:18px;color:#333;min-height:44px;}
-      .timelineWeather .wxDaily{text-align:right;line-height:1.15;}
+      .timelineWeather{display:flex;align-items:center;gap:18px;color:#333;min-height:40px;}
+      .timelineWeather .wxDaily{text-align:right;line-height:1.1;}
       .timelineWeather .wxDaily .wxTemp{font-weight:700;font-size:1.25em;color:#222;}
       .timelineWeather .wxDaily .wxTemp .wxLow{font-weight:500;opacity:.6;font-size:0.8em;margin-left:4px;}
-      .timelineWeather .wxDaily .wxCond{font-size:0.8em;opacity:.75;text-transform:capitalize;margin-top:2px;}
-      .timelineWeather .wxHours{display:flex;align-items:flex-end;gap:12px;}
-      .timelineWeather .wxHour{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:34px;}
-      .timelineWeather .wxHourTime{font-size:0.7em;opacity:.7;white-space:nowrap;}
-      .timelineWeather .wxHourIcon{width:30px;height:30px;object-fit:contain;}
-      .timelineWeather .wxHourEmoji{font-size:1.4em;line-height:1;}
-      .timelineWeather .wxHourNone{font-size:1.1em;opacity:.3;line-height:1.2;}
-      .timelineWeather .wxHourPop{font-size:0.68em;color:#1479b8;font-weight:600;}
+      .timelineWeather .wxDaily .wxCond{font-size:0.8em;opacity:.75;text-transform:capitalize;margin-top:1px;}
+      .timelineWeather .wxHours{display:flex;align-items:center;gap:12px;}
+      .timelineWeather .wxHour{display:flex;flex-direction:column;align-items:center;gap:0;min-width:34px;line-height:1;}
+      .timelineWeather .wxHourTime{font-size:0.65em;opacity:.7;white-space:nowrap;line-height:1.1;}
+      .timelineWeather .wxHourIcon{width:22px;height:22px;object-fit:contain;}
+      .timelineWeather .wxHourEmoji{font-size:1.15em;line-height:1;}
+      .timelineWeather .wxHourNone{font-size:1em;opacity:.3;line-height:1.1;}
+      .timelineWeather .wxHourPop{font-size:0.62em;color:#1479b8;font-weight:600;line-height:1.1;}
       .timelineHeader{display:grid;grid-template-columns:${labelW}px repeat(${colCount},1fr);gap:8px;align-items:end;width:100%;min-width:0;}
       .timelineHeaderDay{font-weight:700;font-size:0.95em;color:#333;line-height:1.1;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineHeaderDay .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--border-color,#999);}
