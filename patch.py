@@ -124,6 +124,44 @@ fn=r'''
     }catch(e){}
     const fill=!!wrapHeight;
 
+    // Optional hamburger button in the top-left of the nav bar. Handy on
+    // panel/kiosk dashboards (e.g. wallpanel with the toolbar hidden). With
+    // menuButtonPath set it navigates (in-app) to that dashboard/path;
+    // otherwise it toggles the HA sidebar.
+    // Config: sidebarToggle:true (aliases menuButton / showMenuButton),
+    //         menuButtonPath:"/dashboard-momohq/0" (aliases menuButtonUrl / menuButtonNavigate).
+    let showMenuBtn=false, menuBtnPath=null;
+    try{
+      const cfgM=(this&&(this._config||this.config))||{};
+      const v=cfgM.sidebarToggle ?? cfgM.menuButton ?? cfgM.showMenuButton;
+      showMenuBtn=(v===true||v==="true");
+      const p=cfgM.menuButtonPath ?? cfgM.menuButtonUrl ?? cfgM.menuButtonNavigate;
+      if(p!=null&&String(p).trim()!=="") menuBtnPath=String(p).trim();
+    }catch(e){}
+    const onMenuBtnClick=()=>{ try{
+      if(menuBtnPath){
+        // In-app navigation (no full reload). Reduce to a same-origin path so it
+        // works regardless of the hostname the panel is opened from.
+        let dest=menuBtnPath;
+        try{const u=new URL(menuBtnPath, location.origin); dest=u.pathname+u.search+u.hash;}catch(e){}
+        history.pushState(null,"",dest);
+        window.dispatchEvent(new CustomEvent("location-changed",{detail:{replace:false},bubbles:true,composed:true}));
+        return;
+      }
+      // Fallback: toggle the sidebar. Narrow layouts (mobile app) open the modal
+      // drawer via hass-toggle-menu; wide layouts dock it, so toggle dock mode.
+      const narrow=!!(window.matchMedia&&window.matchMedia("(max-width: 870px)").matches);
+      if(narrow){
+        this.dispatchEvent(new CustomEvent("hass-toggle-menu",{bubbles:true,composed:true}));
+      }else{
+        const cur=(this.hass&&this.hass.dockedSidebar)||"auto";
+        let next;
+        if(cur==="always_hidden"){next=this._rnrPrevDock||"auto";}
+        else{this._rnrPrevDock=cur;next="always_hidden";}
+        this.dispatchEvent(new CustomEvent("hass-dock-sidebar",{detail:{dock:next},bubbles:true,composed:true}));
+      }
+    }catch(e){} };
+
     const fmtHour=(h)=>{if(use24)return String(h).padStart(2,"0")+":00";const ampm=h<12?"AM":"PM";let hh=h%12;if(hh===0)hh=12;return hh+" "+ampm;};
     const fmtTime=(dt)=>{if(!dt)return "";try{const fmt=(typeof this._timeFormat==="string"&&this._timeFormat)?this._timeFormat:(use24?"HH:mm":"h:mm a");return dt.toFormat?dt.toFormat(fmt):"";}catch(e){try{return String(dt);}catch(_){return "";}}};
 
@@ -168,6 +206,11 @@ fn=r'''
     // Shared ("family") events: full-width, drawn behind the per-person events.
     const sharedColorMap={}; sharedCals.forEach(c=>{sharedColorMap[c.entity]=c.color||"#999";});
     const colorForShared=(ev)=>{ for(const e of (ev.calendars||[])){ if(sharedEntities.has(e)) return sharedColorMap[e]; } return (ev.colors&&ev.colors[0])||"#999"; };
+    // Translucent fill for the full-width shared spans. Built as rgba() rather
+    // than color-mix() so older webviews (e.g. the HA companion app) render the
+    // fill instead of dropping it and showing only the solid left border.
+    const hexToRgba=(hex,a)=>{ try{ let h=String(hex).trim().replace(/^#/,""); if(h.length===3)h=h.split("").map(c=>c+c).join(""); if(h.length!==6)return null; const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16); if([r,g,b].some(n=>Number.isNaN(n)))return null; return `rgba(${r},${g},${b},${a})`; }catch(e){ return null; } };
+    const spanBgFor=(ev)=>{ const c=colorForShared(ev); return hexToRgba(c,0.3)||c; };
     const sharedEvs=allEvs.filter(ev=>Array.isArray(ev.calendars)&&ev.calendars.some(e=>sharedEntities.has(e)));
     const sharedAllDay=sharedEvs.filter(e=>!!e.fullDay);
     const sharedTimed=layoutTimed(sharedEvs.filter(e=>!e.fullDay));
@@ -183,6 +226,7 @@ fn=r'''
       .timelineDateNav .navLeft{display:flex;align-items:center;gap:16px;}
       .timelineDateNav .navBtn{cursor:pointer;user-select:none;border:0;background:rgba(0,0,0,0.06);color:#333;width:40px;height:40px;border-radius:50%;font-size:1.4em;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
       .timelineDateNav .navBtn[disabled]{opacity:.3;cursor:default;}
+      .timelineDateNav .navMenuBtn{font-size:1.2em;}
       .timelineDateNav .dateLabel{cursor:pointer;text-align:center;min-width:9em;line-height:1.15;}
       .timelineDateNav .dateLabel .wd{font-weight:700;font-size:1.15em;color:#222;}
       .timelineDateNav .dateLabel .dt{font-size:0.9em;color:#666;margin-top:2px;}
@@ -206,7 +250,7 @@ fn=r'''
       .timelineAllDayCell{padding:0 6px 2px 6px;min-height:10px;position:relative;z-index:1;}
       .timelineAllDaySpan{position:absolute;left:${labelW}px;right:0;top:0;bottom:2px;z-index:0;padding:0 6px;display:flex;flex-direction:column;justify-content:flex-start;gap:2px;pointer-events:none;}
       .timelineAllDaySpan .timelineAllDayPill{pointer-events:auto;opacity:0.9;}
-      .timelineSpanEvent{box-sizing:border-box;position:absolute;left:${labelW}px;right:0;z-index:0;border-left:6px solid var(--border-color,#999);background:color-mix(in srgb, var(--border-color,#999) 30%, transparent);border-radius:10px;padding:2px 8px;overflow:hidden;color:#333;cursor:pointer;pointer-events:auto;touch-action:manipulation;line-height:1.2;min-height:14px;}
+      .timelineSpanEvent{box-sizing:border-box;position:absolute;left:${labelW}px;right:0;z-index:0;border-left:6px solid var(--border-color,#999);background:var(--wpcp-span-bg, var(--border-color,#999));border-radius:10px;padding:2px 8px;overflow:hidden;color:#333;cursor:pointer;pointer-events:auto;touch-action:manipulation;line-height:1.2;min-height:14px;}
       .timelineSpanEvent .spanTitle{font-weight:600;font-size:0.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .timelineAllDayPill{display:block;border-left:4px solid var(--border-color,#999);background:var(--border-color,#999);color:#fff;border-radius:999px;padding:4px 10px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1em;cursor:pointer;pointer-events:auto;touch-action:manipulation;}
       .timelineBody{position:relative;overflow:${fill?'hidden':'auto'};flex:1 1 auto;min-height:0;height:100%;max-height:100%;border-radius:14px;background:rgba(255,255,255,0.35);width:100%;min-width:0;}
@@ -226,6 +270,7 @@ fn=r'''
       <div class="timelineWrap">
         <div class="timelineDateNav">
           <div class="navLeft">
+            ${showMenuBtn ? W`<button class="navBtn navMenuBtn" title="${menuBtnPath?'Open dashboard':'Show/hide sidebar'}" @click=${onMenuBtnClick}>&#9776;</button>` : ""}
             <button class="navBtn prev" ?disabled=${!canPrev} @click=${()=>goDay(-1)}>&#8249;</button>
             <div class="dateLabel" title="Jump to today" @click=${()=>goToday()}>
               <div class="wd">${day.date.toFormat?day.date.toFormat("cccc"):""}</div>
@@ -301,7 +346,7 @@ fn=r'''
             ${sharedTimed.map((it)=>{
               const ev=it.e;
               return W`<div class="timelineSpanEvent"
-                style="top:${vTop(it.startMin)}; height:${vHeight(it.startMin,it.endMin)}; --border-color:${colorForShared(ev)}"
+                style="top:${vTop(it.startMin)}; height:${vHeight(it.startMin,it.endMin)}; --border-color:${colorForShared(ev)}; --wpcp-span-bg:${spanBgFor(ev)}"
                 @click=${(e)=>{e.stopPropagation();this._handleEventClick(ev.ce||ev,e);}}>
                   <div class="spanTitle">${ev.summary||"(no title)"}</div>
               </div>`;
