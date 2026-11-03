@@ -380,6 +380,17 @@ fn=r'''
 '''
 s=s.replace(anchor3, fn+"\n"+anchor3)
 
+# --- 4) fontScale: scale all card text (every view mode) ---
+# Nearly every font size in the card is em-relative, so setting font-size on
+# <ha-card> scales the whole card. Config: fontScale: 1.25 (a multiplier,
+# 0.5..3), alias textScale.
+anchor4='this._columns.extraSmall&&t.push("--days-columns-xs: "+this._columns.extraSmall+";"),W`'
+assert s.count(anchor4)==1, "anchor4 not unique/found"
+add4=('this._columns.extraSmall&&t.push("--days-columns-xs: "+this._columns.extraSmall+";"),'
+      '(()=>{try{const c=this._config||this.config||{};const n=Number(c.fontScale??c.textScale);'
+      'if(Number.isFinite(n)&&n>=0.5&&n<=3&&n!==1)t.push("font-size: "+(n*100)+"%;");}catch(_e){}})(),W`')
+s=s.replace(anchor4, add4)
+
 assert s!=orig and len(s)>len(orig)
 out="week-planner-card-plus.js"
 open(out,"w",encoding="utf-8").write(s)

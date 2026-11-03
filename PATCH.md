@@ -47,6 +47,14 @@ A new `viewMode: **timelineDayByCalendar**` (aliases: `calendarColumns`,
 - Event blocks use `box-sizing: border-box` so padding/border don't overflow
   the column.
 
+Also, for **every** view mode (not just the timeline):
+
+- **`fontScale:`** (alias `textScale`) — a multiplier (0.5–3) for all card
+  text, e.g. `fontScale: 1.25` for a wall panel read from across the room.
+  It sets `font-size` on `<ha-card>`; the card's sizes are em-relative, so
+  everything scales together. Fixed-px bits (nav buttons, weather icons,
+  hour-label column width) stay the same size.
+
 Upstream's own `schedule` / `timelineDay` / `timelineWeek` / `grid` modes are
 untouched — this is purely additive (a monkey-patch appended to the bundle's
 existing IIFE).
