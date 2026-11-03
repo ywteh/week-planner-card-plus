@@ -61,8 +61,8 @@ existing IIFE).
 
 ## Example
 
-This mirrors the wall-panel config in
-`homeassistant/dashboards/wabisabi.yaml`:
+This mirrors the wall-panel config in the HA config repo
+(`ywteh/homeassistant`, `dashboards/schedule.yaml`):
 
 ```yaml
 type: custom:week-planner-card-plus
