@@ -391,6 +391,32 @@ add4=('this._columns.extraSmall&&t.push("--days-columns-xs: "+this._columns.extr
       'if(Number.isFinite(n)&&n>=0.5&&n<=3&&n!==1)t.push("font-size: "+(n*100)+"%;");}catch(_e){}})(),W`')
 s=s.replace(anchor4, add4)
 
+# --- 5) stop refreshing while the card is off the page ---
+# Upstream re-fetches every calendar every updateInterval seconds from a
+# setTimeout chain that nothing stops when the card is removed, so a card the
+# frontend throws away (e.g. switching dashboards) keeps fetching for as long
+# as the page stays open, and each new copy adds another chain. Now: the
+# timers are cancelled in disconnectedCallback, a timer that still fires while
+# disconnected doesn't fetch or reschedule, and the card fetches again (and
+# restarts the chain) when it is put back on the page.
+def rep5(a, b, name):
+    global s
+    assert s.count(a)==1, name+" not unique/found"
+    s=s.replace(a, b)
+rep5('_updateEvents(){if(this._loading>0)return;',
+     '_updateEvents(){if(!this.isConnected||this._loading>0)return;',
+     "anchor5a")
+rep5('_clearUpdateEventsTimeouts(){this._updateEventsTimeouts.forEach(e=>{clearTimeout(e)})}',
+     '_clearUpdateEventsTimeouts(){this._updateEventsTimeouts.forEach(e=>{clearTimeout(e)}),this._updateEventsTimeouts=[]}',
+     "anchor5b")
+rep5('connectedCallback(){super.connectedCallback&&super.connectedCallback();this._setupResponsive&&this._setupResponsive();}',
+     'connectedCallback(){super.connectedCallback&&super.connectedCallback();this._setupResponsive&&this._setupResponsive();'
+     'this._initialized&&this.hass&&this._calendars&&this._updateEvents();}',
+     "anchor5c")
+rep5('disconnectedCallback(){this._teardownResponsive&&this._teardownResponsive();',
+     'disconnectedCallback(){this._clearUpdateEventsTimeouts&&this._clearUpdateEventsTimeouts();this._teardownResponsive&&this._teardownResponsive();',
+     "anchor5d")
+
 assert s!=orig and len(s)>len(orig)
 out="week-planner-card-plus.js"
 open(out,"w",encoding="utf-8").write(s)

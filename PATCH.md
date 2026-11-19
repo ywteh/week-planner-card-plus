@@ -59,6 +59,14 @@ Upstream's own `schedule` / `timelineDay` / `timelineWeek` / `grid` modes are
 untouched — this is purely additive (a monkey-patch appended to the bundle's
 existing IIFE).
 
+Also, in every view mode: **refreshing stops while the card is off the page.**
+Upstream re-fetches every calendar each `updateInterval` seconds from a timer
+chain that nothing stops, so cards the frontend discards (e.g. on switching
+dashboards) keep fetching until the page reloads, and the copies add up. The
+patch cancels the timer when the card is removed, skips the fetch (and the next
+timer) if one fires while the card is detached, and fetches again when the card
+is put back.
+
 ## Example
 
 This mirrors the wall-panel config in the HA config repo
